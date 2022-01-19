@@ -1,5 +1,7 @@
 # em-mix-student
 
+*This package does not support closed-source distributions.*
+
 A minimal Python package for fitting mixture of Student distributions (i.e., t distributions) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm.
 
 ```python
