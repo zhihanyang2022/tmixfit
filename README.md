@@ -1,2 +1,10 @@
-# em-for-student-mixture
-Expectation-maximization for mixture of Student distributions
+# em-mix-student
+
+A package for fitting mixture of Student distributions to multi-dimensional datasets.
+
+```python
+from emmixstudent import MixtureOfStudents
+
+model = MixtureOfStudents()
+model.fit(data)
+```
