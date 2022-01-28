@@ -2,7 +2,7 @@
 
 ## Intro
 
-This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It is *completely* vectorized and is hence very fast compared to a naive loop-based implementation. 
+This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It is *completely* vectorized and is hence very, very fast compared to a naive loop-based implementation. 
 
 Limitations: 
 
