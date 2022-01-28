@@ -29,6 +29,8 @@ In code, I tried to follow the notation found in the original paper:
 }
 ```
 
+This package is motivated by an exercise in Machine Learning: A Probabilistic Perspective by Kevin P. Murphy. I'd like to thank him for his great book.
+
 ## Example
 
 Here's an example of fitting a 4 component STMM on a 2-dimensional dataset containing 100,000 examples:
