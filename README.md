@@ -12,7 +12,7 @@ Limitations:
 - It has not been tested on datasets with dimensions more than 2.
 - It uses naive initialization strategies for parameters; there must be smarter ones out there.
 
-Overall, this package is for (1) pedagogy and (2) proving the possibility of vectorizing EM for STMM. Please be cautious if you are using it for other purposes like research.
+Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. Please be cautious if you are using it for other purposes like research.
 
 In code, I tried to follow the notation found in the original paper:
 
