@@ -1,6 +1,10 @@
 # EM for Student-t Mixture Models
 
+# Intro
+
 This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It is *completely* vectorized and is hence very fast compared to a naive loop-based implementation. Currently, it does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
+
+# Example
 
 Here's an example of fitting a 4 component STMM on a 2-dimensional dataset containing 100,000 examples:
 
@@ -12,6 +16,8 @@ lower_bounds = model.fit(data)  # contains the lower bound to observed data log 
 
 # do some visualization here
 ```
+
+# Citation
 
 If you use this package, please cite:
 
