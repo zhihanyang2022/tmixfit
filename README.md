@@ -1,5 +1,19 @@
 # EM for Student-t Mixture Models
 
+## Intro
+
+This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It is *completely* vectorized and is hence very, very fast compared to a naive loop-based implementation. 
+
+Limitations: 
+
+- It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
+- It has not been tested on datasets with dimensions more than 2.
+- It uses naive initialization strategies for parameters; there must be smarter ones out there.
+
+Overall, this package is for (1) pedagogy and (2) proving the possibility of vectorizing EM for STMM. Please be cautious if you are using it for other purposes like research.
+
+In code, I tried to follow the notation found in the original paper:
+
 ```bibtex
 @article{peel2000robust,
   title={Robust mixture modelling using the t distribution},
@@ -12,18 +26,6 @@
   publisher={Springer}
 }
 ```
-
-## Intro
-
-This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It is *completely* vectorized and is hence very, very fast compared to a naive loop-based implementation. 
-
-Limitations: 
-
-- It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
-- It has not been tested on datasets with dimensions more than 2.
-- It uses naive initialization strategies for parameters; there must be smarter ones out there.
-
-Overall, this package is for (1) pedagogy and (2) proving the possibility of vectorizing EM for STMM. Please be cautious if you are using it for other purposes like research.
 
 ## Example
 
