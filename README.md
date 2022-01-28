@@ -1,4 +1,4 @@
-# EM for Student-t Mixture Models
+# Expectation Maximization for Student-t Mixture Models
 
 *Keywords: Student-t distribution, mixture model, EM, PyTorch*
 
