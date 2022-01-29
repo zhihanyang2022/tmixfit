@@ -129,4 +129,7 @@ dmypy.json
 .pyre/
 
 # Distribution
-.dist/
+dist/
+
+# Remove Pycharm files
+.idea
