@@ -162,6 +162,7 @@ class STMMVectorized(STMMAbstract):
         for _ in range(num_iters):
             loglik = self.fit_one_iter(data)
             assert loglik >= prev_loglik or np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
+            prev_loglik = loglik
             logliks.append(loglik)
         return logliks
 
