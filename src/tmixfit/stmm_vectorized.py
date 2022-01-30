@@ -1,11 +1,12 @@
+import numpy as np
 import torch
 import torch.distributions as dist
 import pyro.distributions as dist2
 
-from stmm_abstract import STMMAbstract
-from utils import batch_mahalanobis, Param
+from .stmm_abstract import STMMAbstract
+from .utils import batch_mahalanobis, Param
 
-torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float64)  # helps with precision
 
 
 class STMMVectorized(STMMAbstract):
@@ -26,10 +27,12 @@ class STMMVectorized(STMMAbstract):
         self.g = g  # number of components to fit
         self.v = v  # degree of freedom
 
+        assert self.v <= 10000, "For safety, don't set dof too large."
+
         self.pi = pi_init if pi_init else torch.ones(self.g) / self.g
         self.mus = mus_init if mus_init else (torch.rand(self.g, self.p) - 0.5) * 2
         self.Sigmas = Sigmas_init if Sigmas_init else torch.eye(self.p).unsqueeze(0).repeat(self.g, 1, 1)
-        self.scale_trils = torch.linalg.cholesky(self.Sigmas)  # H @ H^T = Sigma
+        self.scale_trils = torch.linalg.cholesky(self.Sigmas)
 
         assert self.pi.size() == (self.g, )
         assert self.mus.size() == (self.g, self.p)
@@ -40,7 +43,7 @@ class STMMVectorized(STMMAbstract):
         self.update_distributions()
 
     def update_distributions(self) -> None:
-        
+
         self.mix = dist.Categorical(self.pi)
         self.comp = dist2.MultivariateStudentT(
             loc=self.mus,
@@ -55,7 +58,7 @@ class STMMVectorized(STMMAbstract):
             self.stmm.log_prob(data)  # this returns one log prob per data point
         ))
 
-    def fit_one_iter(self, data: torch.tensor) -> tuple:
+    def fit_one_iter(self, data: torch.tensor, debug: bool = False) -> tuple:
         """Execute one E step and one M step using data."""
         
         n = data.shape[0]
@@ -91,7 +94,7 @@ class STMMVectorized(STMMAbstract):
 
         # (1) Getting updated pi of shape (g, )
 
-        pass
+        self.pis = tau_matrix.sum(dim=1) / n  # sum over the first dim of shape (g, n), and get (g, )
 
         # (2) Getting updated mus of shape (g, p)
 
@@ -115,20 +118,29 @@ class STMMVectorized(STMMAbstract):
 
         # (2) Getting updated Sigmas of shape (g, p, p)
 
-        # Get updated sigma
-        # shape: (g, p, p)
-        # tau: (g, n)
-        # u: (g, n)
-        # data: (n,p)
-        # mu: (g, p)
+        # This was the most unintuitive operation to vectorize, here were my steps.
 
-        # (g, p, n)
-        # (g, n, p) * tau.view(g, n, 1) * u.view(g, n, 1)
-        # you get (g,p,p)  # g empirical covariance matrix
-        # but it's not so simple, since we need to weigh each item
+        # First, for Eq 31's numerator, if there weren't \tau_{ij} and u_{ij}, then it would be calculating n * the
+        # empirical covariance matrix. Computing this thing is something that I know how to vectorized, as I've done it
+        # a few times before:
 
-        # (g, p, p)
-        # diviser: g
+        # (Y with shape n, p - \mu_j with shape p) ^ T @  (Y with shape n, p - \mu_j with shape p)
+        # Hint: By the rules of broadcasting, \mu_j gets turned into (1, p) and then (n, p).
+
+        # Therefore, calculating demeaned_data_new and using torch.bmm is simply extending this operation to g
+        # components. In other words, without considering \tau_{ij} and u_{ij}, the numerator would be:
+
+        # demeaned_data_new = data.view(1, n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p)
+        # self.Sigmas = torch.bmm(
+        #             demeaned_data_new.transpose(2, 1),  # (g, p, n)
+        #             demeaned_data_new  # (g, n, p)
+        #         ) / (tau_matrix * u_matrix).sum(dim=1).view(self.g, 1, 1)
+
+        # Now, we need to include \tau_{ij} and u_{ij} in the calculations of numerator. The crucial step is to think
+        # about them as a part of either (Y - \mu_j)^T or (Y - \mu_j)
+
+        # Since tau_matrix * u_matrix has shape (g, n), it was easier for me to just pick Y since it has shape (g, n, p)
+        # and hence broadcasting can be done easily by appending a dimension to tau_matrix * u_matrix.
 
         demeaned_data_new = data.view(1, n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p)
         self.Sigmas = torch.bmm(
@@ -139,14 +151,20 @@ class STMMVectorized(STMMAbstract):
 
         self.update_distributions()
 
-        return self.loglik(data), Param(self.pi, self.mus, self.Sigmas)
+        if debug:
+            return self.loglik(data), Param(self.pi, self.mus, self.Sigmas)
+        else:
+            return self.loglik(data)
 
     def fit(self, data: torch.tensor, num_iters: int) -> float:
-        pass
+        logliks = []
+        prev_loglik = - np.inf
+        for _ in range(num_iters):
+            loglik = self.fit_one_iter(data)
+            assert loglik >= prev_loglik or np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
+            logliks.append(loglik)
+        return logliks
 
     def pdf(self, data: torch.tensor) -> torch.tensor:
         n = data.shape[0]
         return torch.exp(self.stmm.log_prob(data.reshape(n, 1, -1)))
-
-# TOdistO:
-# add code for updating pi

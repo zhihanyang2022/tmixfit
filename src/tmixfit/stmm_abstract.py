@@ -8,7 +8,7 @@ class STMMAbstract(ABC):
         pass
 
     @abstractmethod
-    def fit_one_iter(self, data):
+    def fit_one_iter(self, data, debug):
         pass
 
     @abstractmethod

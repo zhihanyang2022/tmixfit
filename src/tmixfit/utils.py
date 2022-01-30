@@ -2,7 +2,7 @@ from collections import namedtuple
 import torch
 
 
-Param = namedtuple("Param", "π μs Σs")
+Param = namedtuple("Param", "pi mus Sigmas")
 
 
 def batch_mahalanobis(bL, bx):
