@@ -156,16 +156,6 @@ class STMMVectorized(STMMAbstract):
         else:
             return self.loglik(data)
 
-    def fit(self, data: torch.tensor, num_iters: int) -> float:
-        logliks = []
-        prev_loglik = - np.inf
-        for _ in range(num_iters):
-            loglik = self.fit_one_iter(data)
-            assert loglik >= prev_loglik or np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
-            prev_loglik = loglik
-            logliks.append(loglik)
-        return logliks
-
     def pdf(self, data: torch.tensor) -> torch.tensor:
         n = data.shape[0]
         return torch.exp(self.stmm.log_prob(data.reshape(n, 1, -1)))
