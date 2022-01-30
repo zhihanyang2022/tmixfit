@@ -23,9 +23,9 @@ Limitations:
 - It uses naive initialization strategies for parameters; there must be smarter ones out there.
 - It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
 - It has not been tested thoroughly on datasets with dimensions more than 2.
-- It does not have mechanisms for spotting / warning numerical instabilities (scikit-learn does have these things, which is wonderful), which tend to happen with the dimension of data points is too large relative to the number of data points.
+- It does not have mechanisms for spotting / warning numerical instabilities (scikit-learn does have these mechanisms for GMMs, which is wonderful), which tend to happen when the dimension of data points is large relative to the number of data points.
 
-Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. You can expect good performance on datasets with a small number of dimensions and a large number of data points (i.e., most stable case). Please be cautious if you are using it for other purposes like research.
+Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. You can expect good performance on datasets with a small number of dimensions and a large number of data points (i.e., the most numerically stable case). Please be cautious if you are using it for other purposes like research.
 
 In code, I tried to follow the notation found in the original paper:
 
