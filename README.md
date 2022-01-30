@@ -12,13 +12,20 @@ Run `src/four_clusters.py` to reproduce these figures.
 
 This is a minimal Python package for fitting Student-t Mixture Models (STMM) to multi-dimensional datasets using the Expectation-Maximization (EM) algorithm. It has been *completely* vectorized using PyTorch (try to find a loop!) and is hence very, very fast compared to a naive loop-based implementation. 
 
-Limitations: 
+Positive things:
 
-- It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
-- It has not been tested on datasets with dimensions more than 2.
+- It runs in reasonable time even even when the dataset is large (e.g., 100,000).
+- It checks whether log-likelihood increases at each iteration of EM.
+- It tests the vectorized version in PyTorch against the loop version in Numpy, which is slower but easier to debug.
+
+Limitations:
+
 - It uses naive initialization strategies for parameters; there must be smarter ones out there.
+- It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
+- It has not been tested thoroughly on datasets with dimensions more than 2.
+- It does not have mechanisms for spotting / warning numerical instabilities, which tend to happen with the dimension of data points is too large relative to the number of data points.
 
-Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. Please be cautious if you are using it for other purposes like research.
+Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. You can expect good performance on datasets with a small number of dimensions and a large number of data points (i.e., most stable case). Please be cautious if you are using it for other purposes like research.
 
 In code, I tried to follow the notation found in the original paper:
 
