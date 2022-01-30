@@ -6,6 +6,7 @@ DOF of 2             |  DOF of 100
 :-------------------------:|:-------------------------:
 <img src="four_clusters_v=2.png"> | <img src="four_clusters_v=100.png">
 
+Run `src/four_clusters.py` to reproduce these figures.
 
 ## Intro
 
