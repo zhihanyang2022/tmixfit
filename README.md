@@ -2,7 +2,7 @@
 
 *Keywords: Student-t distribution, mixture model, Expectation Maximization, PyTorch*
 
-DOF of 2             |  DOF of 100 (approx. normal)
+DOF of 2             |  DOF of 100
 :-------------------------:|:-------------------------:
 <img src="four_clusters_v=2.png"> | <img src="four_clusters_v=100.png">
 
