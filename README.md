@@ -14,7 +14,7 @@ This is a minimal Python package for fitting Student-t Mixture Models (STMM) to 
 
 Positive things:
 
-- It runs in reasonable time even even when the dataset is large (e.g., 100,000).
+- It runs very fast even when the dataset is very large (e.g., 100,000).
 - It checks whether log-likelihood increases at each iteration of EM.
 - It tests the vectorized version in PyTorch against the loop version in Numpy, which is slower but easier to debug.
 
