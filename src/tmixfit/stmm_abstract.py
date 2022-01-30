@@ -10,15 +10,16 @@ class STMMAbstract(ABC):
         pass
 
     @abstractmethod
-    def fit_one_iter(self, data, debug):
+    def fit_one_iter(self, data, debug: bool = False):
         pass
 
-    def fit(self, data: torch.tensor, num_iters: int) -> float:
+    def fit(self, data, num_iters: int) -> list:
         logliks = []
         prev_loglik = - np.inf
         for _ in range(num_iters):
             loglik = self.fit_one_iter(data)
-            assert loglik >= prev_loglik or np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
+            assert loglik >= prev_loglik or \
+                   np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
             prev_loglik = loglik
             logliks.append(loglik)
         return logliks
