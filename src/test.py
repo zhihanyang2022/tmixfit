@@ -7,8 +7,12 @@ import matplotlib.pyplot as plt
 import torch
 from tmixfit import STMMVectorized
 
+
+np.random.seed(42)
+torch.manual_seed(42)
+
 cov_multiplier = 2
-n_per_component = 2500
+n_per_component = 250
 
 dataset_1 = np.random.multivariate_normal(mean=np.array([1, 1]), cov=np.array([
     [0.1, 0.05],
@@ -33,7 +37,7 @@ dataset_4 = np.random.multivariate_normal(mean=np.array([-1,1]), cov=np.array([
 dataset = np.vstack([dataset_1, dataset_2, dataset_3, dataset_4])
 dataset = torch.from_numpy(dataset)
 
-v = 100
+v = 2
 model = STMMVectorized(p=2, g=4, v=v)
 
 start = time.time()
@@ -59,8 +63,8 @@ densities = model.pdf(torch.from_numpy(all_coords)).numpy().reshape(200, 200)
 plt.figure(figsize=(5, 5))
 ax = plt.gca()
 ax.contourf(xxs, yys, densities, cmap='coolwarm')
-cset = ax.contour(xxs, yys, densities, colors='k')
-# plt.scatter(dataset[:, 0], dataset[:, 1], alpha=1, color='white', edgecolor='black', s=50)
+# cset = ax.contour(xxs, yys, densities, colors='k')
+plt.scatter(dataset[:, 0], dataset[:, 1], alpha=1, color='white', edgecolor='black', s=25)
 plt.xlim(-2, 2)
 plt.ylim(-2, 2)
 plt.savefig(f"../four_clusters_v={v}.png", dpi=300)
