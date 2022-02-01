@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Union, NamedTuple, Tuple, Any
 import numpy as np
 import torch
 
@@ -6,14 +7,15 @@ import torch
 class STMMAbstract(ABC):
 
     @abstractmethod
-    def loglik(self, data):
+    def loglik(self, data: Union[np.array, torch.tensor]) -> float:
+        """Compute the log-likelihood of the data under the current parameters. Use for debugging."""
         pass
 
     @abstractmethod
-    def fit_one_iter(self, data, debug: bool = False):
+    def fit_one_iter(self, data: Union[np.array, torch.tensor], debug: bool = False) -> Union[float, Tuple[float, Any]]:
         pass
 
-    def fit(self, data, num_iters: int) -> list:
+    def fit(self, data: Union[np.array, torch.tensor], num_iters: int) -> list:
         logliks = []
         prev_loglik = - np.inf
         for _ in range(num_iters):
@@ -25,5 +27,6 @@ class STMMAbstract(ABC):
         return logliks
 
     @abstractmethod
-    def pdf(self, data):
+    def pdf(self, data: Union[np.array, torch.tensor]) -> Union[np.array, torch.tensor]:
+        """Compute the densities for each data vector under the current parmaeters. Use for plotting."""
         pass

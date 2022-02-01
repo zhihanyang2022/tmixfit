@@ -1,3 +1,5 @@
+from typing import Union, Tuple
+
 import numpy as np
 import torch
 import torch.distributions as dist
@@ -53,13 +55,9 @@ class STMMVectorized(STMMAbstract):
         self.stmm = dist.MixtureSameFamily(self.mix, self.comp)  # Student-t mixture model
 
     def loglik(self, data: torch.tensor) -> float:
-        
-        return float(torch.sum(
-            self.stmm.log_prob(data)  # this returns one log prob per data point
-        ))
+        return float(torch.sum(self.stmm.log_prob(data)))  # this returns one log prob per data point
 
-    def fit_one_iter(self, data: torch.tensor, debug: bool = False) -> tuple:
-        """Execute one E step and one M step using data."""
+    def fit_one_iter(self, data: torch.tensor, debug: bool = False) -> Union[float, Tuple[float, Param]]:
         
         n = data.shape[0]
 
@@ -157,5 +155,4 @@ class STMMVectorized(STMMAbstract):
             return self.loglik(data)
 
     def pdf(self, data: torch.tensor) -> torch.tensor:
-        n = data.shape[0]
-        return torch.exp(self.stmm.log_prob(data.reshape(n, 1, -1)))
+        return torch.exp(self.stmm.log_prob(data))

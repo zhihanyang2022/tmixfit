@@ -56,3 +56,13 @@ lower_bounds = model.fit(data)  # contains the lower bound to observed data log 
 
 # do some visualization here
 ```
+
+## Acknowledgements
+
+Numpy and Scipy doesn't have a neat way for evaluating multiple data vectors simulatenously
+under multiple Student-t distributions. I'm grateful that PyTorch's developers have actually
+thought about this and have made this possible for Multivariate Gaussian, from which I borrowed
+the batch-mahalanobis code. I'm also grateful for that pyro's team took the time to develop
+Multivariate Student-t in PyTorch's API. If it weren't for these foundational stuff, I wouldn't 
+have been able to develop this package. So, thanks a lot! PyTorch is great for deep learning
+and basic numerical computing involving distributions and matrices.
