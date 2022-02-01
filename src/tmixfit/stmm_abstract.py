@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Union, NamedTuple, Tuple, Any
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 class STMMAbstract(ABC):
@@ -12,14 +13,15 @@ class STMMAbstract(ABC):
         pass
 
     @abstractmethod
-    def fit_one_iter(self, data: Union[np.array, torch.tensor], debug: bool = False) -> Union[float, Tuple[float, Any]]:
+    def fit_one_iter(self, data: Union[np.array, torch.tensor]) -> None:
         pass
 
     def fit(self, data: Union[np.array, torch.tensor], num_iters: int) -> list:
         logliks = []
         prev_loglik = - np.inf
-        for _ in range(num_iters):
-            loglik = self.fit_one_iter(data)
+        for _ in tqdm(range(num_iters)):
+            self.fit_one_iter(data)
+            loglik = self.loglik(data)
             assert loglik >= prev_loglik or \
                    np.allclose(loglik, prev_loglik), "EM should be monotonically improving the log-likelihood"
             prev_loglik = loglik

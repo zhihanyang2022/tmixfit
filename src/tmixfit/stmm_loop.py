@@ -12,7 +12,7 @@ class STMMLoop(STMMAbstract):
 
     """
     Loop implementation of STMM and EM in Numpy.
-    Some part of this is definitely vectorize-able, but I'll keep it easy to understand.
+    Some part of this is definitely vectorize-able, but I'll keep it this way.
     """
 
     def __init__(
@@ -29,9 +29,9 @@ class STMMLoop(STMMAbstract):
         self.g = g
         self.v = v
 
-        self.pi = pi_init if pi_init else np.ones((self.g, )) / self.g
-        self.mus = mus_init if mus_init else (np.random.uniform(size=(self.g, self.p)) - 0.5) * 2
-        self.Sigmas = Sigmas_init if Sigmas_init else np.tile(np.expand_dims(np.eye(self.p), axis=0), reps=(self.g, 1, 1))
+        self.pi = pi_init if pi_init is not None else np.ones((self.g, )) / self.g
+        self.mus = mus_init if mus_init is not None else (np.random.uniform(size=(self.g, self.p)) - 0.5) * 2
+        self.Sigmas = Sigmas_init if Sigmas_init is not None else np.tile(np.expand_dims(np.eye(self.p), axis=0), reps=(self.g, 1, 1))
 
     def loglik(self, data: np.array) -> float:
 
@@ -39,17 +39,16 @@ class STMMLoop(STMMAbstract):
 
         sum_ = 0
 
-        for i in range(self.g):
-            for j in range(self.n):
-                sum_ += np.log(
-                    np.sum([
-                        self.pi[ip] * mt(self.mus[ip], self.Sigmas[ip], df=self.v).pdf(data[j])
-                    for ip in range(self.g)])
-                )
+        for j in range(n):
+            sum_ += np.log(
+                np.sum([
+                    self.pi[ip] * mt(self.mus[ip], self.Sigmas[ip], df=self.v).pdf(data[j])
+                for ip in range(self.g)])
+            )
 
         return sum_
 
-    def fit_one_iter(self, data: np.array, debug: bool = False) -> Union[float, Tuple[float, Param]]:
+    def fit_one_iter(self, data: np.array) -> None:
 
         n = data.shape[0]
 
@@ -85,7 +84,7 @@ class STMMLoop(STMMAbstract):
         # Equation 29 in paper
 
         for i in range(self.g):
-            self.pis[i] = np.sum(tau_matrix[i]) / n
+            self.pi[i] = np.sum(tau_matrix[i]) / n
 
         # (2) Getting updated mus
         # Equation 30 in paper
@@ -108,11 +107,6 @@ class STMMLoop(STMMAbstract):
             denominator = np.sum([tau_matrix[i][j] * u_matrix[i][j] for j in range(n)])  # a scalar
             self.Sigmas[i] = numerator / denominator
 
-        if debug:
-            return self.loglik(data), Param(self.pi, self.mus, self.Sigmas)
-        else:
-            return self.loglik(data)
-
     def pdf(self, data: np.array) -> np.array:
 
         n = data.shape[0]
@@ -125,4 +119,4 @@ class STMMLoop(STMMAbstract):
                 ])
             )
 
-        return densities
+        return np.array(densities)

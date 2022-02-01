@@ -31,9 +31,9 @@ class STMMVectorized(STMMAbstract):
 
         assert self.v <= 10000, "For safety, don't set dof too large."
 
-        self.pi = pi_init if pi_init else torch.ones(self.g) / self.g
-        self.mus = mus_init if mus_init else (torch.rand(self.g, self.p) - 0.5) * 2
-        self.Sigmas = Sigmas_init if Sigmas_init else torch.eye(self.p).unsqueeze(0).repeat(self.g, 1, 1)
+        self.pi = pi_init if pi_init is not None else torch.ones(self.g) / self.g
+        self.mus = mus_init if mus_init is not None else (torch.rand(self.g, self.p) - 0.5) * 2
+        self.Sigmas = Sigmas_init if Sigmas_init is not None else torch.eye(self.p).unsqueeze(0).repeat(self.g, 1, 1)
         self.scale_trils = torch.linalg.cholesky(self.Sigmas)
 
         assert self.pi.size() == (self.g, )
@@ -57,7 +57,7 @@ class STMMVectorized(STMMAbstract):
     def loglik(self, data: torch.tensor) -> float:
         return float(torch.sum(self.stmm.log_prob(data)))  # this returns one log prob per data point
 
-    def fit_one_iter(self, data: torch.tensor, debug: bool = False) -> Union[float, Tuple[float, Param]]:
+    def fit_one_iter(self, data: torch.tensor) -> None:
         
         n = data.shape[0]
 
@@ -148,11 +148,6 @@ class STMMVectorized(STMMAbstract):
         self.scale_trils = torch.linalg.cholesky(self.Sigmas)
 
         self.update_distributions()
-
-        if debug:
-            return self.loglik(data), Param(self.pi, self.mus, self.Sigmas)
-        else:
-            return self.loglik(data)
 
     def pdf(self, data: torch.tensor) -> torch.tensor:
         return torch.exp(self.stmm.log_prob(data))
