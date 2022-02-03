@@ -1,3 +1,14 @@
+"""
+test.py
+
+A simple script to test whether the loop-based and vectorized implementations are identical numerically.
+Useful for debugging the vectorized implementation.
+
+Simply call "python test.py" to use this script.
+
+First working on: Feb 4, 2022
+"""
+
 import numpy as np
 import torch
 from tmixfit import STMMLoop, STMMVectorized
