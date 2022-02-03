@@ -1,14 +1,12 @@
-from typing import Union, Tuple
-
-import numpy as np
 import torch
 import torch.distributions as dist
 import pyro.distributions as dist2
 
 from .stmm_abstract import STMMAbstract
-from .utils import batch_mahalanobis, Param
+from .utils import batch_mahalanobis
 
-torch.set_default_dtype(torch.float64)  # helps with precision
+torch.set_default_tensor_type(torch.DoubleTensor)
+torch.set_default_dtype(torch.float64)
 
 
 class STMMVectorized(STMMAbstract):
@@ -30,6 +28,8 @@ class STMMVectorized(STMMAbstract):
         self.v = v  # degree of freedom
 
         assert self.v <= 10000, "For safety, don't set dof too large."
+
+        self.tau_matrix, self.u_matrix = None, None
 
         self.pi = pi_init if pi_init is not None else torch.ones(self.g) / self.g
         self.mus = mus_init if mus_init is not None else (torch.rand(self.g, self.p) - 0.5) * 2
@@ -74,7 +74,7 @@ class STMMVectorized(STMMAbstract):
         p_yj = p_yj_and_yzij_equals_1.sum(dim=0).reshape(1, n)  # (1, n); summed over the component dim (indexed by i),
         # zeroth dim will be broadcasted from 1 to g
 
-        tau_matrix = p_yj_and_yzij_equals_1 / p_yj  # (g, n); or p_zij_equals_1_given_yj
+        self.tau_matrix = p_yj_and_yzij_equals_1 / p_yj  # (g, n); or p_zij_equals_1_given_yj
 
         # (2) Estimating the u matrix of shape (g, n)
 
@@ -86,13 +86,13 @@ class STMMVectorized(STMMAbstract):
             bL=self.scale_trils.view(self.g, 1, self.p, self.p),
             bx=demeaned_data
         )  # (g, n); for each of the g covariance matrices, evaluated mahalanobis distance for n data vectors
-        u_matrix = (self.v + self.p) / (self.v + mahalanobis_distances)
+        self.u_matrix = (self.v + self.p) / (self.v + mahalanobis_distances)
 
         # XXXXXXXXXXXXXXXXXXXX M step XXXXXXXXXXXXXXXXXXXX
 
         # (1) Getting updated pi of shape (g, )
 
-        self.pis = tau_matrix.sum(dim=1) / n  # sum over the first dim of shape (g, n), and get (g, )
+        self.pi = self.tau_matrix.sum(dim=1) / n  # sum over the first dim of shape (g, n), and get (g, )
 
         # (2) Getting updated mus of shape (g, p)
 
@@ -111,7 +111,7 @@ class STMMVectorized(STMMAbstract):
         # For the weighted sum of all data vectors associated with a component, this operation divides it by
         # the sum of all weights - this acts like an averaging operation and creates g prototypical data vectors.
 
-        weights = tau_matrix * u_matrix
+        weights = self.tau_matrix * self.u_matrix
         self.mus = (weights @ data) / weights.sum(dim=1).view(self.g, 1)
 
         # (2) Getting updated Sigmas of shape (g, p, p)
@@ -143,8 +143,8 @@ class STMMVectorized(STMMAbstract):
         demeaned_data_new = data.view(1, n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p)
         self.Sigmas = torch.bmm(
             demeaned_data_new.transpose(2, 1),  # (g, p, n)
-            demeaned_data_new * tau_matrix.view(self.g, n, 1) * u_matrix.view(self.g, n, 1)  # (g, n, p)
-        ) / (tau_matrix * u_matrix).sum(dim=1).view(self.g, 1, 1)
+            demeaned_data_new * self.tau_matrix.view(self.g, n, 1) * self.u_matrix.view(self.g, n, 1)  # (g, n, p)
+        ) / (self.tau_matrix * self.u_matrix).sum(dim=1).view(self.g, 1, 1)
         self.scale_trils = torch.linalg.cholesky(self.Sigmas)
 
         self.update_distributions()
