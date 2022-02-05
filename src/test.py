@@ -54,13 +54,15 @@ assert np.allclose(dataset, dataset_torch.numpy())
 # the original tensor. If the numpy version is modified, the original PyTorch tensor is modified.
 
 model_vectorized = STMMVectorized(
-    p=2, g=4, v=100,
+    p=2, g=4, v=3, tune_v=True
 )
-model_loop = STMMLoop(p=2, g=4, v=100,
-                      pi_init=deepcopy(model_vectorized.pi.numpy()),
-                      mus_init=deepcopy(model_vectorized.mus.numpy()),
-                      Sigmas_init=deepcopy(model_vectorized.Sigmas.numpy())
-                      )
+model_loop = STMMLoop(
+    p=2, g=4, v=3,
+    pi_init=deepcopy(model_vectorized.pi.numpy()),
+    mus_init=deepcopy(model_vectorized.mus.numpy()),
+    Sigmas_init=deepcopy(model_vectorized.Sigmas.numpy()),
+    tune_v=True
+)
 
 # Sanity check
 

@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.stats import multivariate_t as mt
 from scipy.spatial.distance import mahalanobis
+from scipy.special import gamma, digamma
+from scipy.optimize import minimize_scalar
+from functools import partial
 
 import torch
 torch.set_default_dtype(torch.float64)
@@ -19,15 +22,19 @@ class STMMLoop(STMMAbstract):
         self,
         p: int,
         g: int,
-        v: int = 2,
+        v: int = 3,
         pi_init: np.array = None,
         mus_init: np.array = None,
-        Sigmas_init: np.array = None
+        Sigmas_init: np.array = None,
+        tune_v: bool = False,
     ):
+
+        assert 3 <= v <= 50
 
         self.p = p
         self.g = g
-        self.v = v
+        self.vs = np.array([float(v)] * self.g)
+        self.tune_v = tune_v
 
         self.tau_matrix, self.u_matrix = None, None
 
@@ -44,7 +51,7 @@ class STMMLoop(STMMAbstract):
         for j in range(n):
             sum_ += np.log(
                 np.sum(
-                    [self.pi[ip] * np.exp(mt(self.mus[ip], self.Sigmas[ip], df=self.v).logpdf(data[j]))for ip in range(self.g)]
+                    [self.pi[ip] * np.exp(mt(self.mus[ip], self.Sigmas[ip], df=self.vs[ip]).logpdf(data[j]))for ip in range(self.g)]
                 )
             )
 
@@ -52,33 +59,33 @@ class STMMLoop(STMMAbstract):
 
     def fit_one_iter(self, data: np.array) -> None:
 
-        n = data.shape[0]
+        self.n = data.shape[0]
 
         # XXXXXXXXXXXXXXXXXXXX E step XXXXXXXXXXXXXXXXXXXX
 
         # (1) Estimating the tau matrix of shape (g, n)
 
-        self.tau_matrix = np.zeros((self.g, n))
+        self.tau_matrix = np.zeros((self.g, self.n))
 
         for i in range(self.g):
-            for j in range(n):
+            for j in range(self.n):
                 p_zij_equals_1 = self.pi[i]
-                p_yj_given_zij_equals_1 = np.exp(mt(self.mus[i], self.Sigmas[i], df=self.v).logpdf(data[j]))
+                p_yj_given_zij_equals_1 = np.exp(mt(self.mus[i], self.Sigmas[i], df=self.vs[i]).logpdf(data[j]))
                 p_yj = np.sum(
-                    [self.pi[ip] * np.exp(mt(self.mus[ip], self.Sigmas[ip], df=self.v).logpdf(data[j])) for ip in range(self.g)]
+                    [self.pi[ip] * np.exp(mt(self.mus[ip], self.Sigmas[ip], df=self.vs[ip]).logpdf(data[j])) for ip in range(self.g)]
                 )
                 p_zij_equals_1_given_yj = p_yj_given_zij_equals_1 * p_zij_equals_1 / p_yj
                 self.tau_matrix[i][j] = p_zij_equals_1_given_yj
 
         # (2) Estimating the u matrix of shape (g, n)
 
-        self.u_matrix = np.zeros((self.g, n))
+        self.u_matrix = np.zeros((self.g, self.n))
         for i in range(self.g):
-            for j in range(n):
+            for j in range(self.n):
                 mahalanobis_distance = mahalanobis(
                     data[j], self.mus[i], np.linalg.inv(self.Sigmas[i])
                 ) ** 2  # I'm passing in the inverse and squaring the result because Scipy's implementation is weird...
-                self.u_matrix[i][j] = (self.v + self.p) / (self.v + mahalanobis_distance)
+                self.u_matrix[i][j] = (self.vs[i] + self.p) / (self.vs[i] + mahalanobis_distance)
 
         # XXXXXXXXXXXXXXXXXXXX M step XXXXXXXXXXXXXXXXXXXX
 
@@ -86,14 +93,14 @@ class STMMLoop(STMMAbstract):
         # Equation 29 in paper
 
         for i in range(self.g):
-            self.pi[i] = np.sum(self.tau_matrix[i]) / n
+            self.pi[i] = np.sum(self.tau_matrix[i]) / self.n
 
         # (2) Getting updated mus
         # Equation 30 in paper
 
         for i in range(self.g):
-            numerator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] * data[j] for j in range(n)], axis=0)  # a vector
-            denominator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] for j in range(n)])  # a scalar
+            numerator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] * data[j] for j in range(self.n)], axis=0)  # a vector
+            denominator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] for j in range(self.n)])  # a scalar
             self.mus[i] =  numerator / denominator  # a vector
 
         # (3) Getting updated Sigmas
@@ -103,11 +110,46 @@ class STMMLoop(STMMAbstract):
             numerator = np.sum(
                 [
                     self.tau_matrix[i][j] * self.u_matrix[i][j] * (data[j] - self.mus[i]).reshape(self.p, 1) @ (data[j] - self.mus[i]).reshape(self.p, 1).T
-                for j in range(n)],
+                for j in range(self.n)],
                 axis=0
             )  # a matrix
-            denominator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] for j in range(n)])  # a scalar
+            denominator = np.sum([self.tau_matrix[i][j] * self.u_matrix[i][j] for j in range(self.n)])  # a scalar
             self.Sigmas[i] = numerator / denominator
+
+        # (4) Getting updated vs (the so-called adaptive robustness procedure, which is optional)
+
+        if self.tune_v:
+
+            # vs_to_try = np.linspace(3, 50, 20)
+            # objectives = [self.v_objective_to_minimize(vi=vi, i=0, vi_old=self.vs[0]) for vi in vs_to_try]
+            #
+            # import matplotlib.pyplot as plt
+            #
+            # plt.plot(vs_to_try, objectives)
+            # plt.show()
+
+            for i in range(self.g):
+
+                self.vs[i] = minimize_scalar(
+                    fun=partial(self.objective_to_minimize_for_vi, i=i, vi_old=self.vs[i]),
+                    bounds=(3, 50),
+                    method='bounded'
+                ).x
+
+            print("Loop:", self.vs)
+
+    def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
+        """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""
+        sum_ = 0
+        for j in range(self.n):
+            sum_ += self.tau_matrix[i][j] * (
+                - np.log(gamma(0.5 * vi))
+                + 0.5 * vi * np.log(0.5 * vi)
+                + 0.5 * vi * (
+                        np.log(self.u_matrix[i][j]) - self.u_matrix[i][j] + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2)
+                )
+            )
+        return - sum_
 
     def pdf(self, data: np.array) -> np.array:
 
@@ -117,7 +159,7 @@ class STMMLoop(STMMAbstract):
         for j in range(n):
             densities.append(
                 np.sum([
-                    self.pi[ip] * mt(self.mus[ip], self.Sigmas[ip], df=self.v).pdf(data[j]) for ip in range(self.g)
+                    self.pi[ip] * mt(self.mus[ip], self.Sigmas[ip], df=self.vs[ip]).pdf(data[j]) for ip in range(self.g)
                 ])
             )
 

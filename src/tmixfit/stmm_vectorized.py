@@ -1,6 +1,10 @@
 import torch
 import torch.distributions as dist
 import pyro.distributions as dist2
+import numpy as np
+from scipy.special import gamma, digamma
+from scipy.optimize import minimize_scalar
+from functools import partial
 
 from .stmm_abstract import STMMAbstract
 from .utils import batch_mahalanobis
@@ -20,14 +24,16 @@ class STMMVectorized(STMMAbstract):
         v: int = 2,
         pi_init: torch.tensor = None,
         mus_init: torch.tensor = None,
-        Sigmas_init: torch.tensor = None
+        Sigmas_init: torch.tensor = None,
+        tune_v: bool = False
     ):
+
+        assert 3 <= v <= 50
 
         self.p = p  # data dimension
         self.g = g  # number of components to fit
-        self.v = v  # degree of freedom
-
-        assert self.v <= 10000, "For safety, don't set dof too large."
+        self.vs = torch.ones(self.g) * v  # degree of freedom
+        self.tune_v = tune_v
 
         self.tau_matrix, self.u_matrix = None, None
 
@@ -50,7 +56,7 @@ class STMMVectorized(STMMAbstract):
         self.comp = dist2.MultivariateStudentT(
             loc=self.mus,
             scale_tril=self.scale_trils,  # lower triangular cholesky decomposition of cov matrix
-            df=self.v
+            df=self.vs
         )
         self.stmm = dist.MixtureSameFamily(self.mix, self.comp)  # Student-t mixture model
 
@@ -59,7 +65,7 @@ class STMMVectorized(STMMAbstract):
 
     def fit_one_iter(self, data: torch.tensor) -> None:
         
-        n = data.shape[0]
+        self.n = data.shape[0]
 
         # XXXXXXXXXXXXXXXXXXXX E step XXXXXXXXXXXXXXXXXXXX
 
@@ -71,7 +77,7 @@ class STMMVectorized(STMMAbstract):
 
         p_yj_and_yzij_equals_1 = p_zij_equals_1 * p_yj_given_zij_equals_1  # (g, n); the joint
 
-        p_yj = p_yj_and_yzij_equals_1.sum(dim=0).reshape(1, n)  # (1, n); summed over the component dim (indexed by i),
+        p_yj = p_yj_and_yzij_equals_1.sum(dim=0).reshape(1, self.n)  # (1, n); summed over the component dim (indexed by i),
         # zeroth dim will be broadcasted from 1 to g
 
         self.tau_matrix = p_yj_and_yzij_equals_1 / p_yj  # (g, n); or p_zij_equals_1_given_yj
@@ -81,18 +87,18 @@ class STMMVectorized(STMMAbstract):
         # data has shape (1, n, p)
         # mus has shape (g, 1, p)
 
-        demeaned_data = data.view(1, n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p); relied on broadcasting
+        demeaned_data = data.view(1, self.n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p); relied on broadcasting
         mahalanobis_distances = batch_mahalanobis(
             bL=self.scale_trils.view(self.g, 1, self.p, self.p),
             bx=demeaned_data
         )  # (g, n); for each of the g covariance matrices, evaluated mahalanobis distance for n data vectors
-        self.u_matrix = (self.v + self.p) / (self.v + mahalanobis_distances)
+        self.u_matrix = (self.vs.view(self.g, 1) + self.p) / (self.vs.view(self.g, 1) + mahalanobis_distances)
 
         # XXXXXXXXXXXXXXXXXXXX M step XXXXXXXXXXXXXXXXXXXX
 
         # (1) Getting updated pi of shape (g, )
 
-        self.pi = self.tau_matrix.sum(dim=1) / n  # sum over the first dim of shape (g, n), and get (g, )
+        self.pi = self.tau_matrix.sum(dim=1) / self.n  # sum over the first dim of shape (g, n), and get (g, )
 
         # (2) Getting updated mus of shape (g, p)
 
@@ -140,14 +146,57 @@ class STMMVectorized(STMMAbstract):
         # Since tau_matrix * u_matrix has shape (g, n), it was easier for me to just pick Y since it has shape (g, n, p)
         # and hence broadcasting can be done easily by appending a dimension to tau_matrix * u_matrix.
 
-        demeaned_data_new = data.view(1, n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p)
+        demeaned_data_new = data.view(1, self.n, self.p) - self.mus.view(self.g, 1, self.p)  # (g, n, p)
         self.Sigmas = torch.bmm(
             demeaned_data_new.transpose(2, 1),  # (g, p, n)
-            demeaned_data_new * self.tau_matrix.view(self.g, n, 1) * self.u_matrix.view(self.g, n, 1)  # (g, n, p)
+            demeaned_data_new * self.tau_matrix.view(self.g, self.n, 1) * self.u_matrix.view(self.g, self.n, 1)  # (g, n, p)
         ) / (self.tau_matrix * self.u_matrix).sum(dim=1).view(self.g, 1, 1)
         self.scale_trils = torch.linalg.cholesky(self.Sigmas)
 
+        if self.tune_v:  # the only part that does not rely on PyTorch
+
+            # vs_to_try = np.linspace(3, 100, 20)
+            # objectives = [self.objective_to_minimize_for_vi(vi=vi, i=0, vi_old=self.vs[0]) for vi in vs_to_try]
+            #
+            # import matplotlib.pyplot as plt
+            #
+            # plt.plot(vs_to_try, objectives)
+            # plt.show()
+
+            for i in range(self.g):
+
+                self.vs[i] = minimize_scalar(
+                    fun=partial(self.objective_to_minimize_for_vi, i=i, vi_old=float(self.vs[i])),
+                    bounds=(3, 100),
+                    method='bounded'
+                ).x
+
+            print(self.vs)
+
         self.update_distributions()
+
+    def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
+        """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""
+        sum_ = 0
+        for j in range(self.n):
+            sum_ += float(self.tau_matrix[i][j]) * (
+                - np.log(gamma(0.5 * vi))
+                + 0.5 * vi * np.log(0.5 * vi)
+                + 0.5 * vi * (
+                        np.log(float(self.u_matrix[i][j])) - float(self.u_matrix[i][j]) + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2)
+                )
+            )
+        return - sum_
+
+    # def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
+    #     """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""
+    #     a = (torch.sum(self.tau_matrix[i])) * (- np.log(gamma(0.5 * vi) + 0.5 * vi * np.log(0.5 * vi)))
+    #     b = torch.sum(
+    #         self.tau_matrix[i] * (
+    #             0.5 * vi * (torch.log(self.u_matrix[i]) - self.u_matrix[i] + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2))
+    #         )
+    #     )
+    #     return - float(a + b)
 
     def pdf(self, data: torch.tensor) -> torch.tensor:
         return torch.exp(self.stmm.log_prob(data))

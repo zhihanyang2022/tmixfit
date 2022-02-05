@@ -34,7 +34,7 @@ dataset_4 = np.random.multivariate_normal(mean=np.array([-1,1]), cov=np.array([
 
 dataset = np.vstack([dataset_1, dataset_2, dataset_3, dataset_4])
 
-v = 2
+v = 3
 model = STMMLoop(p=2, g=4, v=v)
 
 start = time.time()

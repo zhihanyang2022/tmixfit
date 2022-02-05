@@ -37,8 +37,8 @@ dataset_4 = np.random.multivariate_normal(mean=np.array([-1,1]), cov=np.array([
 dataset = np.vstack([dataset_1, dataset_2, dataset_3, dataset_4])
 dataset = torch.from_numpy(dataset)
 
-v = 2
-model = STMMVectorized(p=2, g=4, v=v)
+v = 3
+model = STMMVectorized(p=2, g=4, v=v, tune_v=True)
 
 start = time.time()
 
