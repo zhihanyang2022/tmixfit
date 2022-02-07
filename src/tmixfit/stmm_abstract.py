@@ -5,7 +5,6 @@ import torch
 from tqdm import tqdm
 
 
-
 class STMMAbstract(ABC):
 
     @abstractmethod

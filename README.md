@@ -8,7 +8,7 @@ DOF of 2 LL | DOF of 2 Viz |  DOF of 100 LL | DOF of 100 Viz
 :--------:|:------:|:------:|:------:
 <img src="four_clusters_v=2_ll.png"> | <img src="four_clusters_v=2_viz.png"> | <img src="four_clusters_v=100_ll.png"> | <img src="four_clusters_v=100_viz.png">
 
-Run `src/four_clusters.py` to reproduce these figures. Scroll down for other examples.
+Run `src/demo_vectorized.py` to reproduce these figures (you'd need to change DOF manually).
 
 ## Intro
 
@@ -51,11 +51,20 @@ This package is motivated by an exercise in Machine Learning: A Probabilistic Pe
 ## Requirements
 
 ```
-pip install numpy scipy torch pyro matplotlib
+pip install numpy==1.19.5 scipy==1.6.2 torch==1.9.1 pyro-ppl==1.7.0 matplotlib==3.1.1
 ```
 
-## Examples
+## Example usages
 
+Use these within `src`:
+
+```bash
+python test.py 
+```
+
+```bash
+python demo_vectorized.py
+```
 
 ## FAQs
 

@@ -9,8 +9,7 @@ from functools import partial
 from .stmm_abstract import STMMAbstract
 from .utils import batch_mahalanobis
 
-torch.set_default_tensor_type(torch.DoubleTensor)
-torch.set_default_dtype(torch.float64)
+torch.set_default_tensor_type(torch.DoubleTensor)  # so that I don't have to worry about float or double
 
 
 class STMMVectorized(STMMAbstract):
