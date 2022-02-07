@@ -2,14 +2,6 @@
 
 *Keywords: Student-t distribution, mixture model, Expectation Maximization, PyTorch*
 
-Bankruptcy dataset:
-
-DOF of 2             |  DOF of 100
-:-------------------------:|:-------------------------:
-<img src="four_clusters_v=2.png"> | <img src="four_clusters_v=100.png">
-
-Custom dataset:
-
 DOF of 2             |  DOF of 100
 :-------------------------:|:-------------------------:
 <img src="four_clusters_v=2.png"> | <img src="four_clusters_v=100.png">
@@ -22,6 +14,7 @@ This is a minimal Python package for fitting Student-t Mixture Models (STMM) to 
 
 Positive things:
 
+- It includes a very detailed derivation of the algorithm in PDF.
 - It can learn the degree-of-freedom (DOF) parameter as well (default option is no).
 - It runs fast even when the dataset is very large (e.g., 100,000), when DOF is fixed.
 - It checks whether log-likelihood increases at each iteration of EM.
