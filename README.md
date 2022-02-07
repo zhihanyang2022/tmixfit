@@ -14,14 +14,14 @@ This is a minimal Python package for fitting Student-t Mixture Models (STMM) to 
 
 Positive things:
 
-- It runs very fast even when the dataset is very large (e.g., 100,000).
+- It can learn the degree-of-freedom (DOF) parameter as well.
+- It runs fast even when the dataset is very large (e.g., 100,000), when DOF is fixed.
 - It checks whether log-likelihood increases at each iteration of EM.
 - It tests the vectorized version in PyTorch against the loop version in Numpy, which is slower but easier to debug.
 
 Limitations:
 
 - It uses naive initialization strategies for parameters; there must be smarter ones out there.
-- It does not support learning the degree-of-freedom parameter(s), but I plan to include it in the near future. 
 - It has not been tested thoroughly on datasets with dimensions more than 2.
 - It does not have mechanisms for spotting / warning numerical instabilities (scikit-learn does have these mechanisms for GMMs, which is wonderful), which tend to happen when the dimension of data points is large relative to the number of data points.
 
@@ -44,25 +44,45 @@ In code, I tried to follow the notation found in the original paper:
 
 This package is motivated by an exercise in Machine Learning: A Probabilistic Perspective by Kevin P. Murphy. I'd like to thank him for his great book.
 
-## Example
+## Requirements
 
-Here's an example of fitting a 4 component STMM on a 2-dimensional dataset containing 100,000 examples:
-
-```python
-from emmixstudent import MixtureOfStudents
-
-model = MixtureOfStudents(num_components=3, num_dimensions=2)
-lower_bounds = model.fit(data)  # contains the lower bound to observed data log likelihood per timestep
-
-# do some visualization here
+```
+pip install numpy scipy torch pyro matplotlib
 ```
 
-## Acknowledgements
+## Examples
 
-Numpy and Scipy doesn't have a neat way for evaluating multiple data vectors simulatenously
-under multiple Student-t distributions. I'm grateful that PyTorch's developers have actually
+
+## FAQs
+
+*Why are you using PyTorch for the vectorized version & Numpy for the loop version?*
+
+**Numpy and Scipy doesn't have a neat way for evaluating multiple data vectors simulatenously
+under multiple multivariate Student-t distributions.** 
+
+I'm grateful that:
+ 
+- PyTorch's developers have actually
 thought about this and have made this possible for Multivariate Gaussian, from which I borrowed
-the batch-mahalanobis code. I'm also grateful for that pyro's team took the time to develop
-Multivariate Student-t in PyTorch's API. If it weren't for these foundational stuff, I wouldn't 
-have been able to develop this package. So, thanks a lot! PyTorch is great for deep learning
-and basic numerical computing involving distributions and matrices.
+the batch-mahalanobis code. 
+- pyro's team took the time to develop Multivariate Student-t in PyTorch's API. 
+
+If it weren't for these foundational stuff, I wouldn't have been able to develop this package. So, thanks a lot to them! 
+
+There are certainly things that I wrote in PyTorch that I could do in Numpy - like simple 
+matrix multiplications - but I wanted to be consistent. 
+ 
+*Could you talk more about learning the DOF parameter?*
+
+Two things.
+
+First: Compared to means and covariance matrices, DOF parameters are rather
+hard to interpret, since their values don't really change the distributions'
+location or spread. And, since EM does not guarantee to reach a global
+optimum, their learned values will depend on their initial values. By
+my (limited) observation, their learned values are larger than their initial values. In short,
+it's rather hard to make sure my code is doing exactly the right thing.
+
+Second: One cannot represent the MLE solution for DOF parameters in closed form.
+Therefore, if DOF parameters are learned, each round of EM would
+involve an inner optimization loop and would hence be much slower.
