@@ -2,9 +2,11 @@
 
 *Keywords: Student-t distribution, mixture model, Expectation Maximization, PyTorch*
 
-DOF of 2             |  DOF of 100
+*Zhihan @ Feb, 2022*
+
+DOF of 2 LL | DOF of 2 Viz |  DOF of 100 LL | DOF of 100 Viz
 :-------------------------:|:-------------------------:
-<img src="four_clusters_v=2.png"> | <img src="four_clusters_v=100.png">
+<img src="four_clusters_v=2_ll.png"> | <img src="four_clusters_v=2_viz.png"> | <img src="four_clusters_v=100_ll.png"> | <img src="four_clusters_v=100_viz.png">
 
 Run `src/four_clusters.py` to reproduce these figures. Scroll down for other examples.
 
