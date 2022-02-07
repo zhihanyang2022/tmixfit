@@ -28,14 +28,14 @@ class STMMVectorized(STMMAbstract):
         tune_v: bool = False
     ):
 
-        assert 3 <= v <= 50
+        assert 1 < v <= 100
 
         self.p = p  # data dimension
         self.g = g  # number of components to fit
         self.vs = torch.ones(self.g) * v  # degree of freedom
         self.tune_v = tune_v
 
-        self.tau_matrix, self.u_matrix = None, None
+        self.n, self.tau_matrix, self.u_matrix = None, None, None
 
         self.pi = pi_init if pi_init is not None else torch.ones(self.g) / self.g
         self.mus = mus_init if mus_init is not None else (torch.rand(self.g, self.p) - 0.5) * 2
@@ -167,36 +167,21 @@ class STMMVectorized(STMMAbstract):
 
                 self.vs[i] = minimize_scalar(
                     fun=partial(self.objective_to_minimize_for_vi, i=i, vi_old=float(self.vs[i])),
-                    bounds=(3, 100),
+                    bounds=(1, 100),
                     method='bounded'
                 ).x
-
-            print(self.vs)
 
         self.update_distributions()
 
     def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
         """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""
-        sum_ = 0
-        for j in range(self.n):
-            sum_ += float(self.tau_matrix[i][j]) * (
-                - np.log(gamma(0.5 * vi))
-                + 0.5 * vi * np.log(0.5 * vi)
-                + 0.5 * vi * (
-                        np.log(float(self.u_matrix[i][j])) - float(self.u_matrix[i][j]) + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2)
-                )
+        a = torch.sum(self.tau_matrix[i]) * (- np.log(gamma(0.5 * vi)) + 0.5 * vi * np.log(0.5 * vi))
+        b = torch.sum(
+            self.tau_matrix[i] * (
+                0.5 * vi * (torch.log(self.u_matrix[i]) - self.u_matrix[i] + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2))
             )
-        return - sum_
-
-    # def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
-    #     """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""
-    #     a = (torch.sum(self.tau_matrix[i])) * (- np.log(gamma(0.5 * vi) + 0.5 * vi * np.log(0.5 * vi)))
-    #     b = torch.sum(
-    #         self.tau_matrix[i] * (
-    #             0.5 * vi * (torch.log(self.u_matrix[i]) - self.u_matrix[i] + digamma((vi_old + self.p) / 2) - np.log((vi_old + self.p) / 2))
-    #         )
-    #     )
-    #     return - float(a + b)
+        )
+        return - float(a + b)
 
     def pdf(self, data: torch.tensor) -> torch.tensor:
         return torch.exp(self.stmm.log_prob(data))

@@ -5,9 +5,6 @@ from scipy.special import gamma, digamma
 from scipy.optimize import minimize_scalar
 from functools import partial
 
-import torch
-torch.set_default_dtype(torch.float64)
-
 from .stmm_abstract import STMMAbstract
 
 
@@ -22,25 +19,26 @@ class STMMLoop(STMMAbstract):
         self,
         p: int,
         g: int,
-        v: int = 3,
+        v: int = 2,
         pi_init: np.array = None,
         mus_init: np.array = None,
         Sigmas_init: np.array = None,
         tune_v: bool = False,
     ):
 
-        assert 3 <= v <= 50
+        assert 1 < v <= 100
 
         self.p = p
         self.g = g
-        self.vs = np.array([float(v)] * self.g)
+        self.vs = np.array([v] * self.g, dtype=float)  # convert to float, otherwise minimize_scalar output will be casted to int
         self.tune_v = tune_v
 
         self.tau_matrix, self.u_matrix = None, None
+        self.n = None
 
         self.pi = pi_init if pi_init is not None else np.ones((self.g, )) / self.g
         self.mus = mus_init if mus_init is not None else (np.random.uniform(size=(self.g, self.p)) - 0.5) * 2
-        self.Sigmas = Sigmas_init if Sigmas_init is not None else np.tile(np.expand_dims(np.eye(self.p), axis=0), reps=(self.g, 1, 1))
+        self.Sigmas = Sigmas_init if Sigmas_init is not None else np.tile(np.expand_dims(np.eye(self.p), axis=0), reps=(self.g, 1, 1)) * 2
 
     def loglik(self, data: np.array) -> float:
 
@@ -120,23 +118,13 @@ class STMMLoop(STMMAbstract):
 
         if self.tune_v:
 
-            # vs_to_try = np.linspace(3, 50, 20)
-            # objectives = [self.v_objective_to_minimize(vi=vi, i=0, vi_old=self.vs[0]) for vi in vs_to_try]
-            #
-            # import matplotlib.pyplot as plt
-            #
-            # plt.plot(vs_to_try, objectives)
-            # plt.show()
-
             for i in range(self.g):
 
                 self.vs[i] = minimize_scalar(
                     fun=partial(self.objective_to_minimize_for_vi, i=i, vi_old=self.vs[i]),
-                    bounds=(3, 50),
+                    bounds=(1, 100),
                     method='bounded'
                 ).x
-
-            print("Loop:", self.vs)
 
     def objective_to_minimize_for_vi(self, vi: float, i: int, vi_old: float) -> float:
         """Equation 25 of paper (there was an error in this equation: there shouldn't be a sum over j)"""

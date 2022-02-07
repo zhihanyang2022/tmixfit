@@ -8,8 +8,8 @@ import torch
 from tmixfit import STMMVectorized
 
 
-np.random.seed(42)
-torch.manual_seed(42)
+np.random.seed(38)
+torch.manual_seed(38)
 
 cov_multiplier = 2
 n_per_component = 250
@@ -37,22 +37,21 @@ dataset_4 = np.random.multivariate_normal(mean=np.array([-1,1]), cov=np.array([
 dataset = np.vstack([dataset_1, dataset_2, dataset_3, dataset_4])
 dataset = torch.from_numpy(dataset)
 
-v = 3
-model = STMMVectorized(p=2, g=4, v=v, tune_v=True)
+v = 100
+model = STMMVectorized(p=2, g=4, v=v, tune_v=False)
 
 start = time.time()
 
-with torch.no_grad():
-    lls = model.fit(dataset, num_iters=50)
+lls = model.fit(dataset, num_iters=100)
 
 end = time.time()
 
 print(end - start)
 
-# plt.figure(figsize=(5, 5))
-# plt.plot(lls)
-# plt.xlabel('Number of Iterations'); plt.ylabel('Log-Likelihood')
-# plt.show()
+plt.figure(figsize=(5, 5))
+plt.plot(lls)
+plt.xlabel('Number of Iterations'); plt.ylabel('Log-Likelihood')
+plt.savefig(f"../four_clusters_v={v}_ll.png", dpi=300)
 
 xs = np.linspace(-2.5, 2.5, 200)
 ys = np.linspace(-2.5, 2.5, 200)
@@ -67,4 +66,4 @@ ax.contourf(xxs, yys, densities, cmap='coolwarm')
 plt.scatter(dataset[:, 0], dataset[:, 1], alpha=1, color='white', edgecolor='black', s=25)
 plt.xlim(-2, 2)
 plt.ylim(-2, 2)
-plt.savefig(f"../four_clusters_v={v}.png", dpi=300)
+plt.savefig(f"../four_clusters_v={v}_viz.png", dpi=300)
