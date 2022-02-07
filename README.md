@@ -21,7 +21,7 @@ is great, but it does have some big logic leaps that took me a while to parse.
 - It can learn the degree-of-freedom (DOF) parameter as well (default option is no).
 - It runs fast even when the dataset is very large (e.g., 100,000), when DOF is fixed.
 - It checks whether log-likelihood increases at each iteration of EM.
-- It tests the vectorized version in PyTorch against the loop version in Numpy, which is slower but easier to debug.
+- It tests the vectorized version in PyTorch against the loop version in Numpy - slower but easier to debug.
 
 Limitations:
 
@@ -29,7 +29,7 @@ Limitations:
 - It has not been tested thoroughly on datasets with dimensions more than 2.
 - It does not have mechanisms for spotting / warning numerical instabilities (scikit-learn does have these mechanisms for GMMs, which is wonderful), which tend to happen when the dimension of data points is large relative to the number of data points.
 
-Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. You can expect good performance on datasets with a small number of dimensions and a large number of data points (i.e., the most numerically stable case). Please be cautious if you are using it for other purposes like research.
+Overall, this package is for (1) pedagogy (you can expect good commentary and clean code) and (2) proving the possibility of vectorizing EM for STMM. You can expect good performance on datasets with a small number of dimensions and a large number of data points (i.e., the most numerically stable case). Please be cautious if you are using it for other purposes like research. Anyway, I wasn't able to find another good implementation.
 
 In code, I tried to follow the notation found in the original paper:
 
