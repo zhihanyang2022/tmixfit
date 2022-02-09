@@ -16,7 +16,7 @@ This is a minimal Python package for fitting Student-t Mixture Models (STMM) to 
 
 Positive things:
 
-- It includes a very detailed derivation of the algorithm in PDF (TODO) using the notation of the cited paper (see below). The paper itself
+- It includes a very detailed derivation of the algorithm in PDF using the notation of the cited paper (see below). The paper itself
 is great, but it does have some big logic leaps that took me a while to parse.
 - It can learn the degree-of-freedom (DOF) parameter as well (default option is no).
 - It runs fast even when the dataset is very large (e.g., 100,000), when DOF is fixed.
